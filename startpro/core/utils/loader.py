@@ -11,6 +11,7 @@ import functools
 from startpro.common.utils.log4py import base_log, log
 from startpro.core import settings
 from startpro.common.utils.config import Config
+from startpro.core.utils.opts import load_script_temp
 
 
 def load_config(config_file, section):
@@ -50,7 +51,7 @@ def loader(**kwargs):
     """
     if settings.HAS_LOAD:
         return
-    script_name, log_name = get_script_name()
+    script_name, log_name = get_log_name()
     root_path = os.getcwd()
     root_path = kwargs.get('root_path', root_path)
     # set system context vars
@@ -96,13 +97,31 @@ def loader(**kwargs):
 
 
 def get_script_name():
+    if len(sys.argv) < 3:
+        print('[WARN]:need start script name.')
+        sys.exit(0)
+    script_name = str(sys.argv[2])
+    scripts = load_script_temp()
+    if not scripts:
+        print('[INFO]:please execute command [startpro list] first')
+        sys.exit(0)
     try:
-        script_name = (sys.argv[2])
+        if script_name.isdigit() and script_name not in scripts:
+            script_name = scripts.keys()[int(script_name)]
+        if script_name not in scripts:
+            raise RuntimeError('Unsupported script')
+        return script_name, scripts[script_name]
+    except Exception:
+        print('[ERROR]:Unsupported script.')
+        sys.exit(0)
+
+
+def get_log_name():
+    try:
+        script_name, _ = get_script_name()
         script_split = script_name.split('.')
         if len(script_split) > 1:
             script_name = script_split[-2]
-        else:
-            script_name = script_split[-1]
         log_name = script_split[-1]
         return script_name, log_name
     except:
